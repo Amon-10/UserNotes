@@ -151,7 +151,8 @@ app.post('/logout', (req, res) => {
 
 // GET all notes with status 200
 app.get('/notes', requireAuth, (req, res) => {
-    res.json(notes)
+    const userNotes = notes.filter(u => u.user_id === currentUser.id)
+    res.json(userNotes)
 })
 
 // Add valid notes to array and return note with status 201
