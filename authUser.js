@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken')
-const jwt_secret = 'super_secret_key'
+// const jwt = require('jsonwebtoken')
+// const jwt_secret = 'super_secret_key'
 
 const express = require('express')
 const app = express()
@@ -8,7 +8,7 @@ const PORT = 3000
 app.use(express.json())
 
 // delete
-const requireAuth = (req, res, next) => {
+/* const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization
 
     if (!authHeader) {
@@ -17,6 +17,10 @@ const requireAuth = (req, res, next) => {
 
     const token = authHeader.split(' ')[1]
 
+    if (token == null) {
+        return res.status(401).json({error: 'token is null'})
+    }
+    
     try {
         const payload = jwt.verify(token, jwt_secret)
         req.userId = payload.userId
@@ -24,15 +28,15 @@ const requireAuth = (req, res, next) => {
     } catch (err) {
         res.status(401).json({ error: 'Invalid or expired token' })
     }
-}
+} */
 
-
-/* const requireAuth = (req, res, next) => {
+// original require auth without jwt
+const requireAuth = (req, res, next) => {
     if (!currentUser) {
         return res.status(401).json({error: 'Authentication required'})
     }
     next()
-} */
+}
 
 // validate note middleware
 // used in POST
@@ -121,19 +125,20 @@ app.post('/login', (req, res) => {
     const user = users.find(u => u.username === username && u.password === password)
     if (user) {
         currentUser = user
+        return res.status(200).json({mesage: 'Logged in successfully'})
     }
     else {
         return res.status(400).json({error: 'Incorrect password or username'})
     }
    // delete this code after testing
 
-    const token = jwt.sign(
+    /* const token = jwt.sign(
         { userId: user.id },
         jwt_secret,
         {expiresIn: '1h'}
     )
 
-    res.json({ token })
+    res.json({ token }) */
     //delete
 })
 
@@ -155,6 +160,7 @@ app.post('/notes', requireAuth, requireJsonBody, validateNote, (req, res) => {
 
     const newNote = {
         id: nextId++,
+        user_id: currentUser.id,
         title,
         content
     }
