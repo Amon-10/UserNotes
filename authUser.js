@@ -122,9 +122,10 @@ app.post('/login', (req, res) => {
     }
 
     // check if another user is logged in
-    if(currentUser != null) {
+    /* if(currentUser != null) {
         return res.status(400).json({error:'Logout current user'})
-    }
+    } */
+   
     // verify user
     const user = users.find(u => u.username === username && u.password === password)
     if (user) {
