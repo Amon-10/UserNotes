@@ -125,7 +125,7 @@ app.post('/login', (req, res) => {
     /* if(currentUser != null) {
         return res.status(400).json({error:'Logout current user'})
     } */
-   
+
     // verify user
     const user = users.find(u => u.username === username && u.password === password)
     if (user) {
@@ -185,9 +185,13 @@ app.delete('/notes/:id', requireAuth, validateId, (req, res) => {
     if(noteIndex === -1) {
         return res.status(404).json({error: 'Note not found'})
     }
-    notes.splice(noteIndex, 1)
-
-    res.status(204).send()
+    else if (notes[noteIndex].user_id === currentUser.id){
+        notes.splice(noteIndex, 1)
+        res.status(204).send()
+    }
+    else {
+        return res.status(403).json({error: "User not authorized to delete this note"})
+    }
 })
 
 app.listen(PORT, () => {
