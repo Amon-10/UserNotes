@@ -185,6 +185,9 @@ app.put('/notes/:id', requireAuth, validateId, validateNote, (req, res) => {
     const { title, content } = req.body
 
     const note = notes.find((n) => n.id === req.id)
+    if(!note) {
+        return res.status(404).json({error: "Note does not exist"})
+    }
 
     note.title = title
     note.content = content
