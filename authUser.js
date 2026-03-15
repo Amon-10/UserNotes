@@ -189,10 +189,16 @@ app.put('/notes/:id', requireAuth, validateId, validateNote, (req, res) => {
         return res.status(404).json({error: "Note does not exist"})
     }
 
-    note.title = title
-    note.content = content
-
-    res.status(200).json({message: "Note updated"})
+    if(note.user_id === currentUser.id){
+        note.title = title
+        note.content = content
+        
+        res.status(200).json({message: "Note updated"})
+    }
+    else {
+        return res.status(403).json({error: "User not authorized to edit this note"})
+    }
+    
 })
 
 // DELETE note by id
