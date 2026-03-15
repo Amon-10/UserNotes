@@ -54,7 +54,7 @@ const validateNote = (req, res, next) => {
 }
 
 // validate id
-// utilised in GET and DELETE by id
+// utilised in GET, PUT and DELETE by id
 const validateId = (req, res, next) => {
     const id = Number(req.params.id)
 
@@ -168,12 +168,28 @@ app.post('/notes', requireAuth, requireJsonBody, validateNote, (req, res) => {
         id: nextId++,
         user_id: currentUser.id,
         title,
-        content
+        content,
+        created_at: new Date(   )
     }
     notes.push(newNote)
 
     res.status(201).json(newNote)
 
+})
+// Edit existing notes
+// User must be logged in
+// Only allow editing of notes by creator of note
+// Note must exist
+// update title and content only
+app.put('/notes/:id', requireAuth, validateId, validateNote, (req, res) => {
+    const { title, content } = req.body
+
+    const note = notes.find((n) => n.id === req.id)
+
+    note.title = title
+    note.content = content
+
+    res.status(200).json({message: "Note updated"})
 })
 
 // DELETE note by id
