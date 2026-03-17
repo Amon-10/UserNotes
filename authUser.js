@@ -4,6 +4,8 @@
 const express = require('express')
 const app = express()
 const PORT = 3000
+//connect to db
+const pool = require('./db')
 
 app.use(express.json())
 
@@ -87,6 +89,17 @@ app.get('/', (req, res) => {
 // get all users
 app.get('/users', (req, res) => {
     res.json(users)
+})
+
+// DB test
+app.get('/db-test', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM notes')
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Database error' })
+  }
 })
 
 // Register new users
