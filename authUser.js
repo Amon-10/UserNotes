@@ -203,7 +203,7 @@ app.put('/notes/:id', requireAuth, validateId, validateNote, async (req, res) =>
             [title, content, req.id, currentUser.id]
         )
         if (updateNote.rowCount === 0) {
-            res.status(404).json({error: 'Note not found or unauthorized'})
+            return res.status(404).json({error: 'Note not found or unauthorized'})
         }
 
         res.status(200).json(updateNote.rows[0])
@@ -216,18 +216,20 @@ app.put('/notes/:id', requireAuth, validateId, validateNote, async (req, res) =>
 // DELETE note by id
 // return status 204 upon success
 // return status 404 if failure
-app.delete('/notes/:id', requireAuth, validateId, (req, res) => {
-    const noteIndex = notes.findIndex(u => u.id === req.id)
+app.delete('/notes/:id', requireAuth, validateId, async (req, res) => {
+    try { 
+        const deleteNote = await pool.query(
+            `DELETE FROM notes WHERE id = $1 AND user_id = $2`,
+            [req.id, currentUser.id]
+        )
+        if (deleteNote.rowCount === 0) {
+            return res.status(404).json({error: 'Note not found or unauthorized'})
+        }
 
-    if(noteIndex === -1) {
-        return res.status(404).json({error: 'Note not found'})
-    }
-    else if (notes[noteIndex].user_id === currentUser.id){
-        notes.splice(noteIndex, 1)
-        res.status(204).send()
-    }
-    else {
-        return res.status(403).json({error: "User not authorized to delete this note"})
+        return res.status(204).send()
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
     }
 })
 
