@@ -182,7 +182,7 @@ app.post('/notes', requireAuth, requireJsonBody, validateNote, async (req, res) 
         res.status(201).json(addNote.rows)
     } catch (err) {
         console.error(err)
-        res.status(500).json({error: 'Database error'})
+        res.status(500).json({error: 'Database error when adding'})
     }
 })
 
@@ -192,24 +192,25 @@ app.post('/notes', requireAuth, requireJsonBody, validateNote, async (req, res) 
 // Only allow editing of notes by creator of note
 // Note must exist
 // update title and content only
-app.put('/notes/:id', requireAuth, validateId, validateNote, (req, res) => {
+app.put('/notes/:id', requireAuth, validateId, validateNote, async (req, res) => {
     const { title, content } = req.body
+    try {
+        const updateNote = await pool.query(
+            `UPDATE notes 
+            SET title = $1, content = $2
+            WHERE id = $3 AND user_id = $4
+            RETURNING *`,
+            [title, content, req.id, currentUser.id]
+        )
+        if (updateNote.rowCount === 0) {
+            res.status(404).json({error: 'Note not found or unauthorized'})
+        }
 
-    const note = notes.find((n) => n.id === req.id)
-    if(!note) {
-        return res.status(404).json({error: "Note does not exist"})
+        res.status(200).json(updateNote.rows[0])
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
     }
-
-    if(note.user_id === currentUser.id){
-        note.title = title
-        note.content = content
-        
-        res.status(200).json({message: "Note updated"})
-    }
-    else {
-        return res.status(403).json({error: "User not authorized to edit this note"})
-    }
-    
 })
 
 // DELETE note by id
