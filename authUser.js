@@ -79,8 +79,6 @@ const requireJsonBody = (req, res, next) => {
 const users = []
 let currentUser = null
 let userId = 1
-const notes = []
-let nextId = 1
 
 app.get('/', (req, res) => {
     res.send('server is running')
@@ -89,17 +87,6 @@ app.get('/', (req, res) => {
 // get all users
 app.get('/users', (req, res) => {
     res.json(users)
-})
-
-// DB test
-app.get('/db-test', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM notes')
-    res.json(result.rows)
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Database error' })
-  }
 })
 
 // Register new users
@@ -167,28 +154,39 @@ app.post('/logout', (req, res) => {
     res.json({message: 'Logged out successfully'})
 })
 
-// GET all notes with status 200
-app.get('/notes', requireAuth, (req, res) => {
-    const userNotes = notes.filter(u => u.user_id === currentUser.id)
-    res.json(userNotes)
+// GET notes belonging to current user
+app.get('/notes', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+        'SELECT * FROM notes WHERE user_id = $1',
+        [currentUser.id]
+    )
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Database error' })
+  }
 })
 
-// Add valid notes to array and return note with status 201
-app.post('/notes', requireAuth, requireJsonBody, validateNote, (req, res) => {
+// Add valid notes to table
+app.post('/notes', requireAuth, requireJsonBody, validateNote, async (req, res) => {
     const { title, content } = req.body
+    try{
+        const addNote = await pool.query(
+            `INSERT INTO notes (user_id, title, content)
+            VALUES ($1, $2, $3)
+            RETURNING *`,
+            [currentUser.id, title, content]
+        )
 
-    const newNote = {
-        id: nextId++,
-        user_id: currentUser.id,
-        title,
-        content,
-        created_at: new Date(   )
+        res.status(201).json(addNote.rows)
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
     }
-    notes.push(newNote)
-
-    res.status(201).json(newNote)
-
 })
+
+
 // Edit existing notes
 // User must be logged in
 // Only allow editing of notes by creator of note
