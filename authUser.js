@@ -76,75 +76,80 @@ const requireJsonBody = (req, res, next) => {
     next()
 }
 
-const users = []
 let currentUser = null
-let userId = 1
 
 app.get('/', (req, res) => {
     res.send('server is running')
 })
 
 // get all users
-app.get('/users', (req, res) => {
-    res.json(users)
+app.get('/users', async (req, res) => {
+    try {
+        const getUsers = await pool.query(
+            `SELECT id, username, created_at FROM users`
+        )
+        return res.json(getUsers.rows)
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
+    }
 })
 
 // Register new users
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     const { username, password } = req.body
 
     if (!username || !password) {
         return res.status(400).json({error: 'Username and password are required'})
     }
+    try {
+        const addUser = await pool.query(
+            `INSERT INTO users (username, password)
+            VALUES ($1, $2)
+            RETURNING id, username, created_at`,
+            [username, password]
+        )
 
-    // check if user exists
-    const userExist = users.find(u => u.username === username)
-    if (userExist) {
-        return res.status(409).json({error: 'User already exists'})
+        res.status(201).json(addUser.rows[0])
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({error: 'username already exists'})
+        }
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
     }
-
-    const newUser = {
-        id : userId++,
-        username,
-        password
-    }
-    users.push(newUser)
-
-    res.status(201).json({message: 'User registered successfully'})
 })
 
 // Login
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body
 
     if (!username || !password) {
         return res.status(400).json({error: 'Username and password are required'})
     }
 
-    // check if another user is logged in
-    /* if(currentUser != null) {
-        return res.status(400).json({error:'Logout current user'})
-    } */
+    try{
+        const user = await pool.query(
+            `SELECT * FROM users WHERE username = $1`,
+            [username]
+        )
 
-    // verify user
-    const user = users.find(u => u.username === username && u.password === password)
-    if (user) {
-        currentUser = user
-        return res.status(200).json({mesage: 'Logged in successfully'})
+        if (user.rowCount === 0) {
+            return res.status(400).json({error: 'Invalid credentials'})
+        }
+
+        if (password != user.rows[0].password) {
+            return res.status(400).json({error: 'Invalid credentials'})
+        }
+        
+        currentUser = user.rows[0]
+
+        res.json({message: 'User logged in successfully'})
+
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({error: 'Database error'})
     }
-    else {
-        return res.status(400).json({error: 'Incorrect password or username'})
-    }
-   // delete this code after testing
-
-    /* const token = jwt.sign(
-        { userId: user.id },
-        jwt_secret,
-        {expiresIn: '1h'}
-    )
-
-    res.json({ token }) */
-    //delete
 })
 
 // Logout
