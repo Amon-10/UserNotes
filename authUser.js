@@ -6,6 +6,7 @@ const app = express()
 const PORT = 3000
 //connect to db
 const pool = require('./db')
+const bcrypt = require('bcrypt')
 
 app.use(express.json())
 
@@ -103,11 +104,13 @@ app.post('/register', async (req, res) => {
         return res.status(400).json({error: 'Username and password are required'})
     }
     try {
+        const hashedPassword = await bcrypt.hash(password, 10)
+
         const addUser = await pool.query(
             `INSERT INTO users (username, password)
             VALUES ($1, $2)
             RETURNING id, username, created_at`,
-            [username, password]
+            [username, hashedPassword]
         )
 
         res.status(201).json(addUser.rows[0])
@@ -129,20 +132,24 @@ app.post('/login', async (req, res) => {
     }
 
     try{
-        const user = await pool.query(
+        const result = await pool.query(
             `SELECT * FROM users WHERE username = $1`,
             [username]
         )
 
-        if (user.rowCount === 0) {
+        if (result.rowCount === 0) {
             return res.status(400).json({error: 'Invalid credentials'})
         }
 
-        if (password != user.rows[0].password) {
+        const user = result.rows[0]
+
+        const isMatch = await bcrypt.compare(password, user.password)
+        
+        if (!isMatch) {
             return res.status(400).json({error: 'Invalid credentials'})
         }
         
-        currentUser = user.rows[0]
+        currentUser = user
 
         res.json({message: 'User logged in successfully'})
 
