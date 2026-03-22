@@ -1,5 +1,6 @@
-// const jwt = require('jsonwebtoken')
-// const jwt_secret = 'super_secret_key'
+require('dotenv').config()
+const jwt = require('jsonwebtoken')
+const jwt_secret = process.env.JWT_SECRET
 
 const express = require('express')
 const app = express()
@@ -10,8 +11,8 @@ const bcrypt = require('bcrypt')
 
 app.use(express.json())
 
-// delete
-/* const requireAuth = (req, res, next) => {
+// require auth with jwt
+const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization
 
     if (!authHeader) {
@@ -31,14 +32,6 @@ app.use(express.json())
     } catch (err) {
         res.status(401).json({ error: 'Invalid or expired token' })
     }
-} */
-
-// original require auth without jwt
-const requireAuth = (req, res, next) => {
-    if (!currentUser) {
-        return res.status(401).json({error: 'Authentication required'})
-    }
-    next()
 }
 
 // validate note middleware
@@ -76,8 +69,6 @@ const requireJsonBody = (req, res, next) => {
 
     next()
 }
-
-let currentUser = null
 
 app.get('/', (req, res) => {
     res.send('server is running')
@@ -144,14 +135,19 @@ app.post('/login', async (req, res) => {
         const user = result.rows[0]
 
         const isMatch = await bcrypt.compare(password, user.password)
-        
+
         if (!isMatch) {
             return res.status(400).json({error: 'Invalid credentials'})
         }
         
-        currentUser = user
+        const token = jwt.sign(
+            {userId: user.id},
+            jwt_secret,
+            {expiresIn : '1h'}
+        )
 
-        res.json({message: 'User logged in successfully'})
+        return res.json({token})
+        
 
     } catch (err) {
         console.error(err)
@@ -159,21 +155,17 @@ app.post('/login', async (req, res) => {
     }
 })
 
-// Logout
-app.post('/logout', (req, res) => {
-    currentUser = null
-
-    res.json({message: 'Logged out successfully'})
-})
-
 // GET notes belonging to current user
 app.get('/notes', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
         'SELECT * FROM notes WHERE user_id = $1',
-        [currentUser.id]
+        [req.userId]
     )
-    res.json(result.rows)
+
+    const notes = result.rows
+
+    res.json(notes)
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Database error' })
@@ -188,7 +180,7 @@ app.post('/notes', requireAuth, requireJsonBody, validateNote, async (req, res) 
             `INSERT INTO notes (user_id, title, content)
             VALUES ($1, $2, $3)
             RETURNING *`,
-            [currentUser.id, title, content]
+            [req.userId, title, content]
         )
 
         res.status(201).json(addNote.rows)
@@ -212,7 +204,7 @@ app.put('/notes/:id', requireAuth, validateId, validateNote, async (req, res) =>
             SET title = $1, content = $2
             WHERE id = $3 AND user_id = $4
             RETURNING *`,
-            [title, content, req.id, currentUser.id]
+            [title, content, req.id, req.userId]
         )
         if (updateNote.rowCount === 0) {
             return res.status(404).json({error: 'Note not found or unauthorized'})
@@ -232,7 +224,7 @@ app.delete('/notes/:id', requireAuth, validateId, async (req, res) => {
     try { 
         const deleteNote = await pool.query(
             `DELETE FROM notes WHERE id = $1 AND user_id = $2`,
-            [req.id, currentUser.id]
+            [req.id, req.userId]
         )
         if (deleteNote.rowCount === 0) {
             return res.status(404).json({error: 'Note not found or unauthorized'})
