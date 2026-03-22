@@ -4,7 +4,7 @@ const jwt_secret = process.env.JWT_SECRET
 
 const express = require('express')
 const app = express()
-const PORT = 3000
+const PORT = process.env.PORT
 //connect to db
 const pool = require('./db')
 const bcrypt = require('bcrypt')
