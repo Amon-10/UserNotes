@@ -1,6 +1,6 @@
 const pool = require('../db')
 
-const getNotes = async (req, res) => {
+const getNotes = async (req, res, next) => {
     try {
     const result = await pool.query(
         'SELECT * FROM notes WHERE user_id = $1',
@@ -11,12 +11,11 @@ const getNotes = async (req, res) => {
 
     res.json(notes)
     } catch (err) {
-        console.error(err)
-        res.status(500).json({ error: 'Database error' })
+        next(err)
     }
 }
 
-const createNote = async (req, res) => {
+const createNote = async (req, res, next) => {
     const { title, content } = req.body
 
     try{
@@ -29,12 +28,11 @@ const createNote = async (req, res) => {
 
         res.status(201).json(addNote.rows)
     } catch (err) {
-        console.error(err)
-        res.status(500).json({error: 'Database error when adding'})
+        next(err)
     }
 }
 
-const updateNote = async (req, res) => {
+const updateNote = async (req, res, next) => {
     const { title, content } = req.body
     const id = Number(req.params.id)
 
@@ -52,12 +50,11 @@ const updateNote = async (req, res) => {
 
         res.status(200).json(updateNote.rows[0])
     } catch (err) {
-        console.error(err)
-        res.status(500).json({error: 'Database error'})
+        next(err)
     }
 }
 
-const deleteNote = async (req, res) => {
+const deleteNote = async (req, res, next) => {
     const id = Number(req.params.id)
 
     try { 
@@ -71,8 +68,7 @@ const deleteNote = async (req, res) => {
 
         return res.status(204).send()
     } catch (err) {
-        console.error(err)
-        res.status(500).json({error: 'Database error'})
+        next(err)
     }
 }
 

@@ -5,25 +5,20 @@ const jwt = require('jsonwebtoken')
 const JWT_SECRET = process.env.JWT_SECRET
 
 
-const getUsers = async (req, res) => {
+const getUsers = async (req, res, next) => {
     try {
         const getUsers = await pool.query(
             `SELECT id, username, created_at FROM users`
         )
         return res.json(getUsers.rows)
     } catch (err) {
-        console.error(err)
-        res.status(500).json({error: 'Database error'})
+        next(err)
     }
 }
 
 // REGISTER
-const register = async (req, res) => {
+const register = async (req, res, next) => {
     const { username, password } = req.body
-
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password are required' })
-    }
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10)
@@ -40,18 +35,13 @@ const register = async (req, res) => {
         if (err.code === '23505') {
             return res.status(409).json({ error: 'Username already exists' })
         }
-        console.error(err)
-        res.status(500).json({ error: 'Database error' })
+        next(err)
     }
 }
 
 // LOGIN
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     const { username, password } = req.body
-
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password are required' })
-    }
 
     try {
         const result = await pool.query(
@@ -80,8 +70,7 @@ const login = async (req, res) => {
         res.json({ token })
 
     } catch (err) {
-        console.error(err)
-        res.status(500).json({ error: 'Database error' })
+        next(err)
     }
 }
 
