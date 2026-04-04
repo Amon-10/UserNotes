@@ -3,6 +3,10 @@ require('dotenv').config()
 const express = require('express')
 const app = express()
 
+app.get('/', (req, res) => {
+  res.send('API is running 🚀')
+})
+
 const authRoutes = require('./routes/authRoutes')
 const noteRoutes = require('./routes/noteRoutes')
 const errorHandler = require('./middleware/errorMiddleware')
