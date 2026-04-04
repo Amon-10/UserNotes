@@ -7,6 +7,16 @@ app.get('/', (req, res) => {
   res.send('API is running 🚀')
 })
 
+app.get('/db-test', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()')
+    res.json({ message: 'DB connected!', time: result.rows[0].now })
+  } catch (err) {
+    console.error('DB test error:', err)
+    res.status(500).json({ error: 'Database connection failed' })
+  }
+})
+
 const authRoutes = require('./routes/authRoutes')
 const noteRoutes = require('./routes/noteRoutes')
 const errorHandler = require('./middleware/errorMiddleware')
